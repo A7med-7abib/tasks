@@ -50,6 +50,7 @@ async function fetchDeliveries() {
     serial: row.serial_number || "",
     center: row.center_name || "",
     product: row.product_name || "",
+    notes: row.notes || "",
     image: row.image_url || "",
     doctor: row.serial_number || "",
     engineer: "",
@@ -116,6 +117,7 @@ async function insertDelivery(delivery) {
     serial_number: delivery.serial,
     center_name: delivery.center,
     product_name: delivery.product,
+    notes: delivery.notes,
     image_url: delivery.image || null
   };
 
@@ -138,6 +140,7 @@ async function insertDelivery(delivery) {
     serial: data.serial_number || "",
     center: data.center_name || "",
     product: data.product_name || "",
+    notes: data.notes || "",
     image: data.image_url || "",
     doctor: data.serial_number || "",
     engineer: "",
@@ -398,6 +401,7 @@ async function saveDelivery() {
   const serial = document.getElementById("serialNumber").value.trim();
   const center = document.getElementById("centerName").value.trim();
   const product = document.getElementById("productName").value.trim();
+  const notes = document.getElementById("taskNote").value.trim();
 
   const imageInput = document.getElementById("taskImage");
   const imageFile = imageInput?.files?.[0] || null;
@@ -488,6 +492,7 @@ async function saveDelivery() {
       serial,
       center,
       product,
+      notes,
       image: imageUrl
     };
 
@@ -583,6 +588,8 @@ function resetForm() {
 
   document.getElementById("productName").value = "";
 
+  document.getElementById("taskNote").value = "";
+
   document.getElementById("taskImage").value = "";
 
 }
@@ -625,12 +632,14 @@ function renderDeliveries() {
       const serial = d.serial || "";
       const center = d.center || "";
       const product = d.product || "";
+      const notes = d.notes || "";
       const day = d.days || "";
 
       return (
         serial.toLowerCase().includes(searchTerm) ||
         center.toLowerCase().includes(searchTerm) ||
         product.toLowerCase().includes(searchTerm) ||
+        notes.toLowerCase().includes(searchTerm) ||
         String(day).toLowerCase().includes(searchTerm)
       );
 
@@ -680,6 +689,9 @@ function renderDeliveries() {
     const serial = d.serial || "—";
 
     const center = d.center || "";
+    const notesHtml = d.notes
+      ? `<div class="delivery-notes">${escapeHtml(d.notes)}</div>`
+      : "";
 
     const imageHtml = d.image
       ? `
@@ -734,6 +746,7 @@ function renderDeliveries() {
 
         </div>
 
+        ${notesHtml}
         ${imageHtml}
 
       </div>
@@ -788,6 +801,10 @@ function openEditModal(id) {
         <input type="text" id="editProduct" value="${escapeHtml(delivery.product || "")}" required />
       </div>
       <div class="form-group form-group-full">
+        <label for="editNote">Note</label>
+        <textarea id="editNote" rows="3">${escapeHtml(delivery.notes || "")}</textarea>
+      </div>
+      <div class="form-group form-group-full">
         <label for="editImage">Replace Image</label>
         <input type="file" id="editImage" accept="image/jpeg,image/png,image/webp" />
       </div>
@@ -822,6 +839,7 @@ async function updateDelivery() {
   const serial = document.getElementById("editSerial").value.trim();
   const center = document.getElementById("editCenter").value.trim();
   const product = document.getElementById("editProduct").value.trim();
+  const notes = document.getElementById("editNote").value.trim();
   const imageFile = document.getElementById("editImage")?.files?.[0] || null;
 
   if (!date || !serial || !center || !product) {
@@ -876,6 +894,7 @@ async function updateDelivery() {
       serial_number: serial,
       center_name: center,
       product_name: product,
+      notes: notes,
       image_url: imageUrl
     };
 
@@ -895,6 +914,7 @@ async function updateDelivery() {
       serial: data.serial_number || "",
       center: data.center_name || "",
       product: data.product_name || "",
+      notes: data.notes || "",
       image: data.image_url || "",
       doctor: data.serial_number || "",
       engineer: "",
