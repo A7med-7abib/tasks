@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a1210" />
+    <meta
+      name="description"
+      content="VIEW TEC task tracker — organize tasks, serial numbers, center names, costs, dates, and images in one fast dashboard."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="VIEW TEC Task Tracker" />
+    <meta property="og:description" content="Create and manage VIEW TEC tasks with serial numbers, center names, dates, costs, and images." />
+    <meta property="og:image" content="./viewtec-logo-BG9fGoOa.png" />
+    <meta name="twitter:card" content="summary" />
+    <title>VIEW TEC Task Tracker | Manage Tasks and Serial Numbers</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="icon" type="image/x-icon" href="./viewtec-logo-BG9fGoOa.png" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    </noscript>
+    <link rel="stylesheet" href="Style.css" />
+    <link rel="canonical" href="./" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "VIEW TEC Task Tracker",
+        "applicationCategory": "BusinessApplication",
+        "description": "Manage VIEW TEC tasks, serial numbers, center names, costs, dates, and images.",
+        "operatingSystem": "Any"
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Background animated elements -->
+    <div class="bg-decoration">
+      <div class="bg-circle bg-circle-1"></div>
+      <div class="bg-circle bg-circle-2"></div>
+      <div class="bg-circle bg-circle-3"></div>
+    </div>
+
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-logo">
+          <img
+            src="./viewtec-logo-BG9fGoOa.png"
+            alt="VIEW TEC company logo"
+            id="logoImg"
+            width="80"
+            height="80"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </div>
+        <h1 id="appTitle">VIEW TEC COMPANY</h1>
+        <div class="header-actions">
+          <button class="btn-utility" type="button" onclick="exportToExcel()" title="Export tasks to CSV">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+          </button>
+          <button class="btn-utility" type="button" onclick="printReport()" title="Print task report">
+            <i class="bi bi-printer"></i> Print Report
+          </button>
+        </div>
+      </header>
+
+      <!-- Add New Task Form -->
+      <div class="form-card" id="formCard">
+        <div class="form-header" onclick="toggleForm()">
+          <h2 id="formTitle">New Task</h2>
+          <span class="form-toggle" id="formToggleIcon">▼</span>
+        </div>
+
+        <div class="form-body" id="formBody">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="deliveryDate">Date</label>
+              <input type="date" id="deliveryDate" required />
+            </div>
+
+            <div class="form-group">
+              <label for="deliveryDays">Day</label>
+              <input type="text" id="deliveryDays" list="daysList" placeholder="e.g. Saturday" />
+              <datalist id="daysList">
+                <option value="Saturday"></option>
+                <option value="Sunday"></option>
+                <option value="Monday"></option>
+                <option value="Tuesday"></option>
+                <option value="Wednesday"></option>
+                <option value="Thursday"></option>
+                <option value="Friday"></option>
+              </datalist>
+            </div>
+
+            <div class="form-group">
+              <label for="deliveryCost">Cost</label>
+              <input type="number" id="deliveryCost" min="0" step="0.01" value="0.00" placeholder="0.00" />
+            </div>
+
+            <div class="form-group">
+              <label for="serialNumber">Serial Number</label>
+              <input type="text" id="serialNumber" placeholder="Enter serial number" />
+            </div>
+
+            <div class="form-group">
+              <label for="centerName">Center Name</label>
+              <input type="text" id="centerName" placeholder="Enter center name" />
+            </div>
+
+            <div class="form-group">
+              <label for="productName">Product Name</label>
+              <input type="text" id="productName" placeholder="Enter product name" />
+            </div>
+
+            <div class="form-group form-group-full">
+              <label for="taskImage">Upload Image</label>
+              <input type="file" id="taskImage" accept="image/*" />
+            </div>
+          </div>
+
+          <button class="btn-submit" id="btnSubmit" type="button" onclick="saveDelivery()">
+            Save Task
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter/Search -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="search"
+            id="searchInput"
+            aria-label="Search tasks"
+            placeholder="Search serial number, product, center, or day..."
+            oninput="filterDeliveries()"
+          />
+        </div>
+       
+
+        <div class="filter-controls-row">
+          <div class="filter-control-group">
+            <label for="monthFilter"><i class="bi bi-calendar-month"></i> Month:</label>
+            <select id="monthFilter" class="filter-select" onchange="filterByMonth(this.value)">
+              <option value="all">All Months</option>
+            </select>
+          </div>
+          <div class="filter-control-group">
+            <label for="dateSort"><i class="bi bi-calendar2-week"></i> Sort Date:</label>
+            <select id="dateSort" class="filter-select" onchange="changeDateSort(this.value)">
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deliveries List -->
+      <div class="deliveries-list" id="deliveriesList">
+        <!-- Cards will be rendered here -->
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon"></div>
+        <h3>No tasks yet</h3>
+        <p>Add your first task above to get started!</p>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">Edit Task</h2>
+          <button class="modal-close" type="button" aria-label="Close edit dialog" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+   <!-- Supabase Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Supabase Configuration -->
+<script src="supabase.js"></script>
+
+<!-- Main Application -->
+<script src="Main.js" defer></script>
+  </body>
+</html>
