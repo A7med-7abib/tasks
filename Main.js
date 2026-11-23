@@ -685,7 +685,7 @@ function renderDeliveries() {
       ? `
         <img
           class="task-image"
-          src="${d.image}"
+          src="${escapeHtml(d.image)}"
           alt="${escapeHtml(center || "Task")} image"
           loading="lazy"
         />
@@ -713,6 +713,25 @@ function renderDeliveries() {
 
           </div>
 
+          <div class="delivery-card-actions">
+            <button
+              type="button"
+              class="btn-action"
+              onclick="openEditModal('${String(d.id).replace(/'/g, "\\'")}')"
+              title="Edit task"
+            >
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button
+              type="button"
+              class="btn-action delete"
+              onclick="deleteDelivery('${String(d.id).replace(/'/g, "\\'")}')"
+              title="Delete task"
+            >
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </div>
+
         </div>
 
         ${imageHtml}
@@ -722,6 +741,239 @@ function renderDeliveries() {
 
   }).join("");
 
+}
+
+
+// ===== Edit Task =====
+
+function openEditModal(id) {
+  const delivery = deliveries.find((item) => String(item.id) === String(id));
+
+  if (!delivery) {
+    showToast("Task not found");
+    return;
+  }
+
+  editingId = delivery.id;
+
+  const modal = document.getElementById("editModal");
+  const body = document.getElementById("modalBody");
+
+  if (!modal || !body) return;
+
+  body.innerHTML = `
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="editDate">Date</label>
+        <input type="date" id="editDate" value="${escapeHtml(delivery.date || "")}" required />
+      </div>
+      <div class="form-group">
+        <label for="editDays">Day</label>
+        <input type="text" id="editDays" value="${escapeHtml(delivery.days || "")}" />
+      </div>
+      <div class="form-group">
+        <label for="editCost">Cost</label>
+        <input type="number" id="editCost" min="0" step="0.01" value="${delivery.cost || 0}" />
+      </div>
+      <div class="form-group">
+        <label for="editSerial">Serial Number</label>
+        <input type="text" id="editSerial" value="${escapeHtml(delivery.serial || "")}" required />
+      </div>
+      <div class="form-group">
+        <label for="editCenter">Center Name</label>
+        <input type="text" id="editCenter" value="${escapeHtml(delivery.center || "")}" required />
+      </div>
+      <div class="form-group">
+        <label for="editProduct">Product Name</label>
+        <input type="text" id="editProduct" value="${escapeHtml(delivery.product || "")}" required />
+      </div>
+      <div class="form-group form-group-full">
+        <label for="editImage">Replace Image</label>
+        <input type="file" id="editImage" accept="image/jpeg,image/png,image/webp" />
+      </div>
+    </div>
+    <button type="button" class="btn-submit" id="btnUpdate" onclick="updateDelivery()">Update Task</button>
+  `;
+
+  document.getElementById("editDate")?.addEventListener("change", (event) => {
+    document.getElementById("editDays").value = event.target.value
+      ? getDayName(event.target.value)
+      : "";
+  });
+
+  modal.classList.add("show");
+}
+
+
+function closeEditModal() {
+  editingId = null;
+  const modal = document.getElementById("editModal");
+  if (modal) modal.classList.remove("show");
+}
+
+
+async function updateDelivery() {
+  if (editingId === null) return;
+
+  const taskId = editingId;
+  const date = document.getElementById("editDate").value;
+  const days = document.getElementById("editDays").value.trim();
+  const cost = parseFloat(document.getElementById("editCost").value) || 0;
+  const serial = document.getElementById("editSerial").value.trim();
+  const center = document.getElementById("editCenter").value.trim();
+  const product = document.getElementById("editProduct").value.trim();
+  const imageFile = document.getElementById("editImage")?.files?.[0] || null;
+
+  if (!date || !serial || !center || !product) {
+    showToast("Please complete all required fields");
+    return;
+  }
+
+  const button = document.getElementById("btnUpdate");
+  const originalText = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = imageFile ? "Uploading image..." : "Updating...";
+  }
+
+  let uploadedPath = null;
+  const oldDelivery = deliveries.find((item) => String(item.id) === String(taskId));
+
+  try {
+    let imageUrl = oldDelivery?.image || null;
+
+    if (imageFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(imageFile.type)) {
+        throw new Error("Only JPG, PNG and WEBP images are allowed.");
+      }
+      if (imageFile.size > 5 * 1024 * 1024) {
+        throw new Error("Image size must be less than 5 MB.");
+      }
+
+      const extension = imageFile.name.split(".").pop().toLowerCase();
+      uploadedPath = `${crypto.randomUUID()}.${extension}`;
+      const { data, error } = await window.db.storage
+        .from("delivery-images")
+        .upload(uploadedPath, imageFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: imageFile.type
+        });
+      if (error) throw error;
+
+      const { data: publicData } = window.db.storage
+        .from("delivery-images")
+        .getPublicUrl(data.path);
+      imageUrl = publicData?.publicUrl;
+      if (!imageUrl) throw new Error("Could not generate the public image URL.");
+    }
+
+    const updates = {
+      delivery_date: date,
+      delivery_day: days,
+      delivery_cost: cost,
+      serial_number: serial,
+      center_name: center,
+      product_name: product,
+      image_url: imageUrl
+    };
+
+    const { data, error } = await window.db
+      .from("deliveries")
+      .update(updates)
+      .eq("id", taskId)
+      .select()
+      .single();
+    if (error) throw error;
+
+    const updated = {
+      id: data.id,
+      date: data.delivery_date,
+      days: data.delivery_day,
+      cost: Number(data.delivery_cost) || 0,
+      serial: data.serial_number || "",
+      center: data.center_name || "",
+      product: data.product_name || "",
+      image: data.image_url || "",
+      doctor: data.serial_number || "",
+      engineer: "",
+      stops: [{ name: data.serial_number || "" }]
+    };
+
+    deliveries = deliveries.map((item) =>
+      String(item.id) === String(taskId) ? updated : item
+    );
+
+    if (String(editingId) === String(taskId)) {
+      closeEditModal();
+    }
+    if (uploadedPath && oldDelivery?.image) {
+      const oldPath = getStorageObjectPath(oldDelivery.image);
+      if (oldPath) {
+        const { error: removeError } = await window.db.storage
+          .from("delivery-images")
+          .remove([oldPath]);
+        if (removeError) console.error("Old image cleanup error:", removeError);
+      }
+    }
+    updateMonthFilterOptions();
+    renderDeliveries();
+    updateStats();
+    showToast("Task updated successfully!");
+  } catch (error) {
+    console.error("Update Error:", error);
+    if (uploadedPath) {
+      await window.db.storage.from("delivery-images").remove([uploadedPath]);
+    }
+    showToast(error.message || "Failed to update task");
+  } finally {
+    if (button) {
+      button.textContent = originalText || "Update Task";
+      button.disabled = false;
+    }
+  }
+}
+
+
+// ===== Delete Task =====
+
+async function deleteDelivery(id) {
+  const delivery = deliveries.find((item) => String(item.id) === String(id));
+  if (!delivery) return;
+
+  if (!window.confirm(`Delete task "${delivery.serial || "this task"}"?`)) return;
+
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.classList.add("removing");
+
+  try {
+    const { error } = await window.db
+      .from("deliveries")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+
+    if (delivery.image) {
+      const imagePath = getStorageObjectPath(delivery.image);
+      if (imagePath) {
+        const { error: removeError } = await window.db.storage
+          .from("delivery-images")
+          .remove([imagePath]);
+        if (removeError) console.error("Image cleanup error:", removeError);
+      }
+    }
+
+    deliveries = deliveries.filter((item) => String(item.id) !== String(id));
+    updateMonthFilterOptions();
+    renderDeliveries();
+    updateStats();
+    showToast("Task deleted successfully!");
+  } catch (error) {
+    console.error("Delete Error:", error);
+    if (card) card.classList.remove("removing");
+    showToast(error.message || "Failed to delete task");
+  }
 }
 
 
@@ -990,6 +1242,24 @@ function escapeHtml(str) {
 
   return div.innerHTML;
 
+}
+
+
+function getStorageObjectPath(publicUrl) {
+  if (!publicUrl) return null;
+
+  try {
+    const url = new URL(publicUrl);
+    const marker = "/storage/v1/object/public/delivery-images/";
+    const markerIndex = url.pathname.indexOf(marker);
+
+    if (markerIndex === -1) return null;
+
+    return decodeURIComponent(url.pathname.substring(markerIndex + marker.length));
+  } catch (error) {
+    console.error("Invalid image URL:", error);
+    return null;
+  }
 }
 
 
